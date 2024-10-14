@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React Query Todos</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Include React and React DOM from CDN -->
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+
+    <!-- Include React Query from CDN (TanStack Query) -->
+    <script src="https://unpkg.com/@tanstack/react-query@4.21.0/build/umd/index.production.js"></script>
+
+    <!-- Include Babel for JSX support in browser -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Your React code -->
+    <script type="text/babel">
+      const { useQuery, QueryClient, QueryClientProvider } = window.ReactQuery;
+      const { useState } = React;
+
+      const queryClient = new QueryClient();
+
+      // Fetch function to get todos with filter
+      const fetchTodos = async (filter) => {
+        let url = "https://jsonplaceholder.typicode.com/todos";
+        if (filter === "completed") {
+          url += "?completed=true";
+        } else if (filter === "incomplete") {
+          url += "?completed=false";
+        }
+        const res = await fetch(url);
+        if (!res.ok) {
+          throw new Error("Network response was not ok");
+        }
+        return res.json();
+      };
+
+      // React component to fetch and display todos
+      const Todos = () => {
+        const [filter, setFilter] = useState("all");
+
+        const { data, error, isLoading, isError } = useQuery(
+          ["todos", filter], // Query key
+          () => fetchTodos(filter), // Query function
+          {
+            staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+            cacheTime: 1000 * 60 * 10, // Cache data for 10 minutes
+          }
+        );
+
+        const handleFilterChange = (event) => {
+          setFilter(event.target.value);
+        };
+
+        if (isLoading) return <p>Loading todos...</p>;
+        if (isError) return <p>Error: {error.message}</p>;
+
+        return (
+          <div>
+            <div>
+              <label>
+                <input
+                  type="radio"
+                  value="all"
+                  checked={filter === "all"}
+                  onChange={handleFilterChange}
+                />
+                All
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="completed"
+                  checked={filter === "completed"}
+                  onChange={handleFilterChange}
+                />
+                Completed
+              </label>
+              <label>
+                <input
+                  type="radio"
+                  value="incomplete"
+                  checked={filter === "incomplete"}
+                  onChange={handleFilterChange}
+                />
+                Incomplete
+              </label>
+            </div>
+            <ul>
+              {data.map((todo) => (
+                <li key={todo.id}>
+                  {todo.title} {todo.completed ? "✔️" : "❌"}
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      };
+
+      const App = () => (
+        <QueryClientProvider client={queryClient}>
+          <h1>Todo List</h1>
+          <Todos />
+        </QueryClientProvider>
+      );
+
+      // Render the React app
+      ReactDOM.render(<App />, document.getElementById("root"));
+    </script>
+  </body>
+</html>
